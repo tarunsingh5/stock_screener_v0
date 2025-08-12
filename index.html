@@ -36,12 +36,12 @@
 
         <!-- API Key Input -->
         <div id="api-key-section" class="hidden mb-6 p-4 bg-yellow-900/30 border border-yellow-500 rounded-lg">
-            <label for="api-key" class="block text-sm font-medium text-yellow-300 mb-2">API Key Required</label>
+            <label for="api-key" class="block text-sm font-medium text-yellow-300 mb-2">FMP API Key Required</label>
             <div class="flex flex-col sm:flex-row gap-2">
                 <input type="password" id="api-key" class="flex-grow bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" placeholder="Enter your FMP API Key">
                 <button id="save-key-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Key</button>
             </div>
-            <p class="text-xs text-yellow-400 mt-2">Your key will be securely stored in your user profile using Firebase.</p>
+            <p class="text-xs text-yellow-400 mt-2">Your key will be saved in your browser's local storage.</p>
         </div>
 
         <!-- Main Content -->
@@ -132,12 +132,7 @@
         </div>
     </div>
 
-    <script type="module">
-        // --- Firebase Imports ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
+    <script>
         // --- DOM Elements ---
         const apiKeySection = document.getElementById('api-key-section');
         const apiKeyInput = document.getElementById('api-key');
@@ -170,47 +165,13 @@
         // --- Global State ---
         let apiKey = '';
         const FMP_API_BASE_URL = 'https://financialmodelingprep.com/api/v3';
-        let db, auth, userId;
 
-        // --- Firebase Setup ---
-        async function initializeFirebase() {
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-            if (!firebaseConfig.apiKey) {
-                console.error("Firebase config is missing.");
-                apiKeySection.classList.remove('hidden');
-                apiKeySection.innerHTML = '<p class="text-red-400">Firebase is not configured.</p>';
-                return;
-            }
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    userId = user.uid;
-                    await loadApiKeyFromFirestore();
-                } else {
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    } catch (error) {
-                        console.error("Anonymous sign-in failed:", error);
-                        apiKeySection.classList.remove('hidden');
-                    }
-                }
-            });
-        }
-
-        async function loadApiKeyFromFirestore() {
-            if (!userId) return;
-            const docRef = doc(db, `artifacts/${typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'}/users/${userId}/settings/fmpKey`);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists() && docSnap.data().key) {
-                apiKey = docSnap.data().key;
-                apiKeyInput.value = apiKey;
+        // --- App Initialization ---
+        function initializeApp() {
+            const savedKey = localStorage.getItem('fmpApiKey');
+            if (savedKey) {
+                apiKey = savedKey;
+                apiKeyInput.value = savedKey;
                 apiKeySection.style.display = 'none';
                 mainContent.classList.remove('opacity-30', 'pointer-events-none');
                 loadAndFilterStocks();
@@ -219,12 +180,11 @@
             }
         }
 
-        async function saveApiKeyToFirestore() {
+        function saveApiKey() {
             const key = apiKeyInput.value.trim();
-            if (key && userId) {
-                const docRef = doc(db, `artifacts/${typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'}/users/${userId}/settings/fmpKey`);
-                await setDoc(docRef, { key: key });
+            if (key) {
                 apiKey = key;
+                localStorage.setItem('fmpApiKey', key);
                 apiKeySection.style.display = 'none';
                 mainContent.classList.remove('opacity-30', 'pointer-events-none');
                 loadAndFilterStocks();
@@ -246,7 +206,6 @@
             filterBtn.disabled = true;
             filterBtn.textContent = 'Loading...';
             try {
-                // Lowered market cap to $10B to find more stocks
                 let url = '/stock-screener?marketCapMoreThan=10000000000&limit=1000&exchange=NASDAQ,NYSE';
                 if (sectorFilter.value) url += `&sector=${encodeURIComponent(sectorFilter.value)}`;
                 if (peFilter.value) url += `&peMoreThan=0&peLowerThan=${peFilter.value}`;
@@ -261,7 +220,7 @@
                 stockSelect.innerHTML = optionsHtml;
                 stockCount.textContent = sortedStocks.length;
             } catch (error) {
-                alert('Failed to load stock list.');
+                alert('Failed to load stock list. Check your API key.');
                 console.error('Error loading stocks:', error);
             } finally {
                 filterBtn.disabled = false;
@@ -384,11 +343,11 @@
         }
 
         // --- Event Listeners & Initialization ---
-        saveKeyBtn.addEventListener('click', saveApiKeyToFirestore);
+        saveKeyBtn.addEventListener('click', saveApiKey);
         analyzeBtn.addEventListener('click', runAnalysis);
         filterBtn.addEventListener('click', loadAndFilterStocks);
         
-        initializeFirebase();
+        initializeApp();
 
     </script>
 </body>
