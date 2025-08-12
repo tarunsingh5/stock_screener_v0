@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Stock Screener & Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        select {
+            -webkit-appearance: none; -moz-appearance: none; appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-13%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2013l128%20127.9c3.6%203.6%207.8%205.4%2013%205.4s9.4-1.8%2013-5.4L287%2095.2c3.6-3.6%205.4-7.8%205.4-13%200-5-1.8-9.2-5.4-13z%22/%3E%3C/svg%3E');
+            background-repeat: no-repeat;
+            background-position: right .7rem center;
+            background-size: .65em auto;
+            padding-right: 2.5rem;
+        }
+        .metric-card {
+             background-color: rgba(55, 65, 81, 0.5);
+             border-radius: 0.75rem;
+             padding: 1.5rem;
+             text-align: center;
+        }
+        .recommendation-card { transition: all 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-7xl bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-white">Advanced Stock Screener & Analyzer</h1>
+            <p class="text-gray-400 mt-2">Filter large-cap stocks and perform in-depth analysis.</p>
+        </div>
+
+        <!-- API Key Input -->
+        <div id="api-key-section" class="hidden mb-6 p-4 bg-yellow-900/30 border border-yellow-500 rounded-lg">
+            <label for="api-key" class="block text-sm font-medium text-yellow-300 mb-2">API Key Required</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <input type="password" id="api-key" class="flex-grow bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500" placeholder="Enter your FMP API Key">
+                <button id="save-key-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Key</button>
+            </div>
+            <p class="text-xs text-yellow-400 mt-2">Your key will be securely stored in your user profile using Firebase.</p>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content" class="opacity-30 pointer-events-none">
+            <!-- Screening Filters -->
+            <div class="bg-gray-700/50 rounded-xl p-4 mb-6">
+                <h3 class="text-lg font-semibold mb-3 text-white">Screening Filters</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                        <label for="sector-filter" class="text-sm text-gray-300">Sector</label>
+                        <select id="sector-filter" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 mt-1 text-white">
+                            <option value="">All</option>
+                            <option>Technology</option>
+                            <option>Healthcare</option>
+                            <option>Financial Services</option>
+                            <option>Consumer Cyclical</option>
+                            <option>Industrials</option>
+                            <option>Communication Services</option>
+                            <option>Energy</option>
+                            <option>Consumer Defensive</option>
+                            <option>Utilities</option>
+                            <option>Real Estate</option>
+                            <option>Basic Materials</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="pe-filter" class="text-sm text-gray-300">Max P/E Ratio</label>
+                        <input type="number" id="pe-filter" placeholder="e.g., 25" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 mt-1 text-white">
+                    </div>
+                    <div>
+                        <label for="dividend-filter" class="text-sm text-gray-300">Min Dividend Yield (%)</label>
+                        <input type="number" id="dividend-filter" placeholder="e.g., 2" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 mt-1 text-white">
+                    </div>
+                    <div class="self-end">
+                        <button id="filter-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Apply Filters</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="md:col-span-2">
+                    <label for="stock-select" class="block text-sm font-medium text-gray-300 mb-1">Select Stock (<span id="stock-count">0</span> found)</label>
+                    <select id="stock-select" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"></select>
+                </div>
+                <div class="self-end">
+                    <button id="analyze-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Analyze</button>
+                </div>
+            </div>
+
+            <!-- Analysis Results -->
+            <div id="results-section" class="hidden">
+                <div id="loader" class="text-center py-8 hidden"><p>Analyzing...</p></div>
+                <div id="analysis-grid" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <div class="lg:col-span-1 space-y-6">
+                        <div id="recommendation-card" class="recommendation-card p-6 text-center rounded-xl h-full flex flex-col justify-center">
+                            <h3 class="text-lg font-semibold text-gray-300 mb-2">Overall Rating</h3>
+                            <p id="recommendation-text" class="text-4xl font-bold">-</p>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">API DCF vs. Price</h3><p id="api-dcf-value" class="text-2xl font-bold">-</p><p id="api-dcf-interpretation" class="text-sm text-gray-400 mt-1">-</p></div>
+                        <div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">Analyst Rating</h3><p id="analyst-rating" class="text-3xl font-bold">-</p></div>
+                    </div>
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">RSI (14 Day)</h3><p id="rsi-value" class="text-3xl font-bold">-</p><p id="rsi-interpretation" class="text-sm text-gray-400 mt-1">-</p></div>
+                        <div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">Trend Signal</h3><p id="ma-cross-value" class="text-2xl font-bold">-</p></div>
+                    </div>
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">Insider Sentiment</h3><p id="insider-sentiment" class="text-3xl font-bold">-</p></div>
+                        <div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">P/E Ratio</h3><p id="pe-value" class="text-3xl font-bold">-</p></div>
+                    </div>
+                </div>
+                 <!-- News and Filings Section -->
+                <div id="news-filings-section" class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div class="bg-gray-700/50 rounded-xl p-6">
+                        <h3 class="text-lg font-semibold mb-3">Recent News</h3>
+                        <div id="news-list" class="space-y-3 max-h-60 overflow-y-auto pr-2"></div>
+                    </div>
+                    <div class="bg-gray-700/50 rounded-xl p-6">
+                         <h3 class="text-lg font-semibold mb-3">Dividend Yield</h3>
+                         <p id="dividend-yield" class="text-4xl font-bold text-center">-</p>
+                         <h3 class="text-lg font-semibold mb-3 mt-6">SEC Filings</h3>
+                         <a id="filings-link" href="#" target="_blank" class="block text-center bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">View Filings on EDGAR</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Firebase Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- DOM Elements ---
+        const apiKeySection = document.getElementById('api-key-section');
+        const apiKeyInput = document.getElementById('api-key');
+        const saveKeyBtn = document.getElementById('save-key-btn');
+        const mainContent = document.getElementById('main-content');
+        const stockSelect = document.getElementById('stock-select');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const resultsSection = document.getElementById('results-section');
+        const loader = document.getElementById('loader');
+        const analysisGrid = document.getElementById('analysis-grid');
+        const recommendationCard = document.getElementById('recommendation-card');
+        const recommendationText = document.getElementById('recommendation-text');
+        const rsiValue = document.getElementById('rsi-value');
+        const rsiInterpretation = document.getElementById('rsi-interpretation');
+        const maCrossValue = document.getElementById('ma-cross-value');
+        const peValue = document.getElementById('pe-value');
+        const analystRating = document.getElementById('analyst-rating');
+        const insiderSentiment = document.getElementById('insider-sentiment');
+        const dividendYield = document.getElementById('dividend-yield');
+        const filterBtn = document.getElementById('filter-btn');
+        const sectorFilter = document.getElementById('sector-filter');
+        const peFilter = document.getElementById('pe-filter');
+        const dividendFilter = document.getElementById('dividend-filter');
+        const stockCount = document.getElementById('stock-count');
+        const apiDcfValue = document.getElementById('api-dcf-value');
+        const apiDcfInterpretation = document.getElementById('api-dcf-interpretation');
+        const newsList = document.getElementById('news-list');
+        const filingsLink = document.getElementById('filings-link');
+
+        // --- Global State ---
+        let apiKey = '';
+        const FMP_API_BASE_URL = 'https://financialmodelingprep.com/api/v3';
+        let db, auth, userId;
+
+        // --- Firebase Setup ---
+        async function initializeFirebase() {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+            if (!firebaseConfig.apiKey) {
+                console.error("Firebase config is missing.");
+                apiKeySection.classList.remove('hidden');
+                apiKeySection.innerHTML = '<p class="text-red-400">Firebase is not configured.</p>';
+                return;
+            }
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    await loadApiKeyFromFirestore();
+                } else {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Anonymous sign-in failed:", error);
+                        apiKeySection.classList.remove('hidden');
+                    }
+                }
+            });
+        }
+
+        async function loadApiKeyFromFirestore() {
+            if (!userId) return;
+            const docRef = doc(db, `artifacts/${typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'}/users/${userId}/settings/fmpKey`);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists() && docSnap.data().key) {
+                apiKey = docSnap.data().key;
+                apiKeyInput.value = apiKey;
+                apiKeySection.style.display = 'none';
+                mainContent.classList.remove('opacity-30', 'pointer-events-none');
+                loadAndFilterStocks();
+            } else {
+                apiKeySection.classList.remove('hidden');
+            }
+        }
+
+        async function saveApiKeyToFirestore() {
+            const key = apiKeyInput.value.trim();
+            if (key && userId) {
+                const docRef = doc(db, `artifacts/${typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'}/users/${userId}/settings/fmpKey`);
+                await setDoc(docRef, { key: key });
+                apiKey = key;
+                apiKeySection.style.display = 'none';
+                mainContent.classList.remove('opacity-30', 'pointer-events-none');
+                loadAndFilterStocks();
+            } else {
+                alert('Please enter a valid API key.');
+            }
+        }
+
+        // --- Analysis & Data Functions ---
+        async function fetchFMP(endpoint) {
+            const separator = endpoint.includes('?') ? '&' : '?';
+            const url = `${FMP_API_BASE_URL}${endpoint}${separator}apikey=${apiKey}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`API request failed: ${response.status}`);
+            return response.json();
+        }
+
+        async function loadAndFilterStocks() {
+            filterBtn.disabled = true;
+            filterBtn.textContent = 'Loading...';
+            try {
+                // Lowered market cap to $10B to find more stocks
+                let url = '/stock-screener?marketCapMoreThan=10000000000&limit=1000&exchange=NASDAQ,NYSE';
+                if (sectorFilter.value) url += `&sector=${encodeURIComponent(sectorFilter.value)}`;
+                if (peFilter.value) url += `&peMoreThan=0&peLowerThan=${peFilter.value}`;
+                if (dividendFilter.value) url += `&dividendMoreThan=${dividendFilter.value}`;
+                
+                const stocks = await fetchFMP(url);
+                const sortedStocks = stocks.sort((a, b) => a.companyName.localeCompare(b.companyName));
+                let optionsHtml = '<option value="" disabled selected>Select a stock</option>';
+                sortedStocks.forEach(stock => {
+                    optionsHtml += `<option value="${stock.symbol}">${stock.companyName} (${stock.symbol})</option>`;
+                });
+                stockSelect.innerHTML = optionsHtml;
+                stockCount.textContent = sortedStocks.length;
+            } catch (error) {
+                alert('Failed to load stock list.');
+                console.error('Error loading stocks:', error);
+            } finally {
+                filterBtn.disabled = false;
+                filterBtn.textContent = 'Apply Filters';
+            }
+        }
+
+        function calculateMA(prices, period) {
+            if (prices.length < period) return null;
+            return prices.slice(-period).reduce((a, b) => a + b, 0) / period;
+        }
+
+        function calculateRSI(prices, period = 14) {
+             if (prices.length <= period) return null;
+            let gains = 0, losses = 0;
+            for (let i = prices.length - period; i < prices.length; i++) {
+                const diff = prices[i] - prices[i-1];
+                if (diff >= 0) { gains += diff; } else { losses -= diff; }
+            }
+            if (losses === 0) return 100;
+            const rs = (gains / period) / (losses / period);
+            return 100 - (100 / (1 + rs));
+        }
+
+        async function runAnalysis() {
+            const symbol = stockSelect.value;
+            if (!symbol) return;
+
+            resultsSection.style.display = 'block';
+            analysisGrid.style.display = 'none';
+            document.getElementById('news-filings-section').style.display = 'none';
+            loader.style.display = 'block';
+
+            try {
+                const [historicalData, keyMetricsData, ratingData, insiderData, dcfData, newsData] = await Promise.all([
+                    fetchFMP(`/historical-price-full/${symbol}?serietype=line`).catch(() => ({historical: []})),
+                    fetchFMP(`/key-metrics-ttm/${symbol}`).catch(() => ([{}])),
+                    fetchFMP(`/rating/${symbol}`).catch(() => ([{}])),
+                    fetchFMP(`/insider-trading?symbol=${symbol}&limit=100`).catch(() => []),
+                    fetchFMP(`/discounted-cash-flow/${symbol}`).catch(() => ([{}])),
+                    fetchFMP(`/stock_news?tickers=${symbol}&limit=3`).catch(() => [])
+                ]);
+
+                let score = 0;
+                const prices = historicalData.historical ? historicalData.historical.map(d => d.close).reverse() : [];
+                
+                // Technical Analysis
+                if (prices.length > 200) {
+                    const rsi = calculateRSI(prices.slice(-15), 14);
+                    rsiValue.textContent = rsi ? rsi.toFixed(2) : 'N/A';
+                    rsiInterpretation.textContent = rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral';
+                    if (rsi < 30) score++;
+
+                    const ma50 = calculateMA(prices, 50);
+                    const ma200 = calculateMA(prices, 200);
+                    const prevMa50 = calculateMA(prices.slice(0, -1), 50);
+
+                    if (ma50 > ma200 && prevMa50 <= calculateMA(prices.slice(0, -1), 200)) {
+                        maCrossValue.textContent = 'Golden Cross'; score += 2;
+                    } else if (ma50 < ma200 && prevMa50 >= calculateMA(prices.slice(0, -1), 200)) {
+                        maCrossValue.textContent = 'Death Cross'; score -= 2;
+                    } else {
+                        maCrossValue.textContent = ma50 > ma200 ? 'Uptrend' : 'Downtrend';
+                    }
+                }
+
+                // Fundamental & Sentiment Analysis
+                const metrics = keyMetricsData[0];
+                peValue.textContent = metrics?.peRatioTTM?.toFixed(2) ?? 'N/A';
+                dividendYield.textContent = metrics?.dividendYieldTTM ? `${(metrics.dividendYieldTTM * 100).toFixed(2)}%` : 'N/A';
+                if (metrics?.dividendYieldTTM > 0.02) score++;
+
+                const rating = ratingData[0];
+                if (rating) {
+                    analystRating.textContent = rating.ratingRecommendation || 'N/A';
+                    if (rating.ratingScore === 5) score +=2;
+                    if (rating.ratingScore === 4) score +=1;
+                    if (rating.ratingScore === 1) score -=2;
+                    if (rating.ratingScore === 2) score -=1;
+                }
+                
+                const netInsider = insiderData.reduce((acc, trade) => acc + (trade.transactionType === 'P-Purchase' ? trade.transactionShares : -trade.transactionShares), 0);
+                insiderSentiment.textContent = netInsider > 5000 ? 'Positive' : netInsider < -5000 ? 'Negative' : 'Neutral';
+                if (netInsider > 10000) score++;
+                
+                // API DCF Analysis
+                const dcf = dcfData[0];
+                const currentPrice = prices.length > 0 ? prices[prices.length - 1] : dcf?.StockPrice;
+                if (dcf?.dcf && currentPrice) {
+                    apiDcfValue.textContent = `$${dcf.dcf.toFixed(2)} vs $${currentPrice.toFixed(2)}`;
+                    const upside = ((dcf.dcf - currentPrice) / currentPrice) * 100;
+                    apiDcfInterpretation.textContent = `${upside.toFixed(1)}% Upside`;
+                    if (upside > 20) score += 2; else if (upside > 5) score++;
+                } else {
+                    apiDcfValue.textContent = 'N/A';
+                    apiDcfInterpretation.textContent = 'Data unavailable';
+                }
+
+                // News and Filings
+                newsList.innerHTML = newsData.length ? newsData.map(item => `<a href="${item.url}" target="_blank" class="block p-2 bg-gray-800 rounded-lg hover:bg-gray-700"><p class="font-semibold text-sm">${item.title}</p></a>`).join('') : '<p class="text-gray-400 text-sm">No news.</p>';
+                filingsLink.href = `https://www.sec.gov/edgar/browse/?CIK=${symbol}`;
+
+                // Final Recommendation
+                let recText = 'Hold', recColor = 'bg-gray-700/50';
+                if (score >= 4) { recText = 'Strong Buy'; recColor = 'bg-green-800/80'; }
+                else if (score >= 2) { recText = 'Buy'; recColor = 'bg-green-700/60'; }
+                else if (score <= -4) { recText = 'Strong Sell'; recColor = 'bg-red-800/80'; }
+                else if (score <= -2) { recText = 'Sell'; recColor = 'bg-red-700/60'; }
+                recommendationText.textContent = recText;
+                recommendationCard.className = `recommendation-card p-6 text-center rounded-xl h-full flex flex-col justify-center ${recColor}`;
+
+            } catch (error) {
+                alert(`Failed to analyze ${symbol}.`);
+                console.error('Analysis error:', error);
+            } finally {
+                analysisGrid.style.display = 'grid';
+                document.getElementById('news-filings-section').style.display = 'grid';
+                loader.style.display = 'none';
+            }
+        }
+
+        // --- Event Listeners & Initialization ---
+        saveKeyBtn.addEventListener('click', saveApiKeyToFirestore);
+        analyzeBtn.addEventListener('click', runAnalysis);
+        filterBtn.addEventListener('click', loadAndFilterStocks);
+        
+        initializeFirebase();
+
+    </script>
+</body>
+</html>
