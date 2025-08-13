@@ -25,6 +25,13 @@
              text-align: center;
         }
         .recommendation-card { transition: all 0.3s ease-in-out; }
+        .timespan-btn {
+            transition: background-color 0.2s ease-in-out;
+        }
+        .timespan-btn.active {
+            background-color: #4F46E5; /* indigo-600 */
+            color: white;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
@@ -101,7 +108,18 @@
                         <div class="lg:col-span-1 space-y-6"><div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">RSI (14 Day)</h3><p id="rsi-value" class="text-3xl font-bold">-</p><p id="rsi-interpretation" class="text-sm text-gray-400 mt-1">-</p></div><div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">Trend Signal</h3><p id="ma-cross-value" class="text-2xl font-bold">-</p></div></div>
                         <div class="lg:col-span-1 space-y-6"><div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">Insider Sentiment</h3><p id="insider-sentiment" class="text-3xl font-bold">-</p></div><div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">P/E Ratio</h3><p id="pe-value" class="text-3xl font-bold">-</p></div></div>
                     </div>
-                    <div id="chart-section" class="mt-6 bg-gray-700/50 rounded-xl p-6"><h3 class="text-lg font-semibold mb-3 text-white">1-Year Price Chart</h3><canvas id="priceChart"></canvas></div>
+                    <div id="chart-section" class="mt-6 bg-gray-700/50 rounded-xl p-6">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-lg font-semibold text-white">Price Chart</h3>
+                            <div id="chart-timespan-selector" class="flex space-x-1 bg-gray-800 p-1 rounded-lg">
+                                <button data-span="1M" class="timespan-btn px-3 py-1 text-sm rounded-md">1M</button>
+                                <button data-span="6M" class="timespan-btn px-3 py-1 text-sm rounded-md">6M</button>
+                                <button data-span="1Y" class="timespan-btn px-3 py-1 text-sm rounded-md active">1Y</button>
+                                <button data-span="5Y" class="timespan-btn px-3 py-1 text-sm rounded-md">5Y</button>
+                            </div>
+                        </div>
+                        <canvas id="priceChart"></canvas>
+                    </div>
                     <div id="news-filings-section" class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                         <div class="bg-gray-700/50 rounded-xl p-6"><h3 class="text-lg font-semibold mb-3">Recent News</h3><div id="news-list" class="space-y-3 max-h-60 overflow-y-auto pr-2"></div></div>
                         <div class="bg-gray-700/50 rounded-xl p-6"><h3 class="text-lg font-semibold mb-3">Dividend Yield</h3><p id="dividend-yield" class="text-4xl font-bold text-center">-</p><h3 class="text-lg font-semibold mb-3 mt-6">SEC Filings</h3><a id="filings-link" href="#" target="_blank" class="block text-center bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">View Filings on EDGAR</a></div>
@@ -127,9 +145,10 @@
         const sp500Price = document.getElementById('sp500-price'), sp500Change = document.getElementById('sp500-change'), tnxPrice = document.getElementById('tnx-price'), tnxChange = document.getElementById('tnx-change');
         const watchlistDiv = document.getElementById('watchlist'), addWatchlistBtn = document.getElementById('add-watchlist-btn');
         const pegFilter = document.getElementById('peg-filter'), deFilter = document.getElementById('de-filter');
+        const chartTimespanSelector = document.getElementById('chart-timespan-selector');
 
         // --- Global State ---
-        let apiKey = '', priceChart = null, allStocks = [], watchlist = [];
+        let apiKey = '', priceChart = null, allStocks = [], watchlist = [], fullHistoricalData = [];
         const FMP_API_BASE_URL = 'https://financialmodelingprep.com/api/v3';
 
         // --- App Initialization ---
@@ -208,7 +227,7 @@
                 console.error('Error loading stocks:', error);
             } finally {
                 filterBtn.disabled = false;
-                filterBtn.textContent = 'Apply Filters';
+                filterBtn.textContent = 'Apply';
             }
         }
 
@@ -229,15 +248,31 @@
             return 100 - (100 / (1 + rs));
         }
         
-        function renderPriceChart(historicalData) {
+        function renderPriceChart(timespan = '1Y') {
             if (priceChart) priceChart.destroy();
-            const prices = historicalData.map(d => d.close).reverse();
-            const labels = historicalData.map(d => d.date).reverse();
-            const ma50Data = [], ma200Data = [];
+            
+            const maPeriods = {
+                '1M': { short: 5, long: 10 },
+                '6M': { short: 20, long: 50 },
+                '1Y': { short: 50, long: 200 },
+                '5Y': { short: 50, long: 200 }
+            };
+            const { short: shortPeriod, long: longPeriod } = maPeriods[timespan];
 
-            for (let i = 0; i < prices.length; i++) {
-                ma50Data.push(i >= 49 ? calculateMA(prices.slice(0, i + 1), 50) : null);
-                ma200Data.push(i >= 199 ? calculateMA(prices.slice(0, i + 1), 200) : null);
+            const tradingDays = { '1M': 21, '6M': 126, '1Y': 252, '5Y': 1260 };
+            const sliceDays = Math.min(tradingDays[timespan], fullHistoricalData.length);
+            // FIX: Slice from the beginning (most recent) of the array, not the end.
+            const dataSlice = fullHistoricalData.slice(0, sliceDays);
+
+            const prices = dataSlice.map(d => d.close).reverse();
+            const labels = dataSlice.map(d => d.date).reverse();
+            const maShortData = [], maLongData = [];
+
+            const fullPrices = fullHistoricalData.map(d => d.close).reverse();
+            for (let i = 0; i < labels.length; i++) {
+                const fullPriceIndex = fullPrices.length - labels.length + i;
+                maShortData.push(fullPriceIndex >= (shortPeriod - 1) ? calculateMA(fullPrices.slice(0, fullPriceIndex + 1), shortPeriod) : null);
+                maLongData.push(fullPriceIndex >= (longPeriod - 1) ? calculateMA(fullPrices.slice(0, fullPriceIndex + 1), longPeriod) : null);
             }
 
             priceChart = new Chart(priceChartCanvas.getContext('2d'), {
@@ -246,8 +281,8 @@
                     labels,
                     datasets: [
                         { label: 'Price', data: prices, borderColor: 'rgb(59, 130, 246)', borderWidth: 2, pointRadius: 0 },
-                        { label: '50-Day MA', data: ma50Data, borderColor: 'rgb(234, 179, 8)', borderWidth: 1.5, pointRadius: 0, borderDash: [5, 5] },
-                        { label: '200-Day MA', data: ma200Data, borderColor: 'rgb(239, 68, 68)', borderWidth: 1.5, pointRadius: 0, borderDash: [5, 5] }
+                        { label: `${shortPeriod}-Day MA`, data: maShortData, borderColor: 'rgb(234, 179, 8)', borderWidth: 1.5, pointRadius: 0, borderDash: [5, 5] },
+                        { label: `${longPeriod}-Day MA`, data: maLongData, borderColor: 'rgb(239, 68, 68)', borderWidth: 1.5, pointRadius: 0, borderDash: [5, 5] }
                     ]
                 },
                 options: { scales: { x: { ticks: { color: '#9CA3AF' } }, y: { ticks: { color: '#9CA3AF' } } }, plugins: { legend: { labels: { color: '#D1D5DB' } } } }
@@ -264,8 +299,12 @@
             loader.style.display = 'block';
 
             try {
+                const fiveYearsAgo = new Date();
+                fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+                const fromDate = fiveYearsAgo.toISOString().split('T')[0];
+
                 const [historicalData, keyMetricsData, ratingData, insiderData, dcfData, newsData] = await Promise.all([
-                    fetchFMP(`/historical-price-full/${symbol}?serietype=line`).catch(() => ({historical: []})),
+                    fetchFMP(`/historical-price-full/${symbol}?from=${fromDate}`).catch(() => ({historical: []})),
                     fetchFMP(`/key-metrics-ttm/${symbol}`).catch(() => ([{}])),
                     fetchFMP(`/rating/${symbol}`).catch(() => ([{}])),
                     fetchFMP(`/insider-trading?symbol=${symbol}&limit=100`).catch(() => []),
@@ -273,11 +312,15 @@
                     fetchFMP(`/stock_news?tickers=${symbol}&limit=3`).catch(() => [])
                 ]);
 
+                fullHistoricalData = historicalData.historical || [];
                 let score = 0;
-                const prices = historicalData.historical ? historicalData.historical.map(d => d.close).reverse() : [];
+                const prices = fullHistoricalData.map(d => d.close).reverse();
                 
                 if (prices.length > 200) {
-                    renderPriceChart(historicalData.historical);
+                    renderPriceChart('1Y');
+                    chartTimespanSelector.querySelector('.active').classList.remove('active');
+                    chartTimespanSelector.querySelector('[data-span="1Y"]').classList.add('active');
+
                     const rsi = calculateRSI(prices.slice(-15), 14);
                     rsiValue.textContent = rsi ? rsi.toFixed(2) : 'N/A';
                     rsiInterpretation.textContent = rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral';
@@ -386,6 +429,13 @@
         analyzeBtn.addEventListener('click', () => runAnalysis(stockSearchInput.value.trim().toUpperCase()));
         filterBtn.addEventListener('click', loadAndFilterStocks);
         addWatchlistBtn.addEventListener('click', (e) => addToWatchlist(e.target.dataset.symbol));
+        chartTimespanSelector.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                chartTimespanSelector.querySelector('.active').classList.remove('active');
+                e.target.classList.add('active');
+                renderPriceChart(e.target.dataset.span);
+            }
+        });
         
         initializeApp();
 
