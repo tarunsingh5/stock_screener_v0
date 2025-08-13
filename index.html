@@ -3,18 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Stock Screener & Analyzer</title>
+    <title>Pro Stock Screener & Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        select {
+        select, .filter-input {
             -webkit-appearance: none; -moz-appearance: none; appearance: none;
-            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-13%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2013l128%20127.9c3.6%203.6%207.8%205.4%2013%205.4s9.4-1.8%2013-5.4L287%2095.2c3.6-3.6%205.4-7.8%205.4-13%200-5-1.8-9.2-5.4-13z%22/%3E%3C/svg%3E');
             background-repeat: no-repeat;
             background-position: right .7rem center;
             background-size: .65em auto;
-            padding-right: 2.5rem;
+        }
+        select {
+             background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-13%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2013l128%20127.9c3.6%203.6%207.8%205.4%2013%205.4s9.4-1.8%2013-5.4L287%2095.2c3.6-3.6%205.4-7.8%205.4-13%200-5-1.8-9.2-5.4-13z%22/%3E%3C/svg%3E');
         }
         .metric-card {
              background-color: rgba(55, 65, 81, 0.5);
@@ -27,11 +29,11 @@
 </head>
 <body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
 
-    <div class="w-full max-w-7xl bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8">
+    <div class="w-full max-w-screen-xl bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8">
         <!-- Header -->
         <div class="text-center mb-6">
-            <h1 class="text-3xl font-bold text-white">Advanced Stock Screener & Analyzer</h1>
-            <p class="text-gray-400 mt-2">Filter large-cap stocks and perform in-depth analysis.</p>
+            <h1 class="text-3xl font-bold text-white">Pro Stock Screener & Command Center</h1>
+            <p class="text-gray-400 mt-2">Filter, analyze, and track stocks with advanced tools.</p>
         </div>
 
         <!-- API Key Input -->
@@ -44,89 +46,67 @@
             <p class="text-xs text-yellow-400 mt-2">Your key will be saved in your browser's local storage.</p>
         </div>
 
-        <!-- Main Content -->
-        <div id="main-content" class="opacity-30 pointer-events-none">
-            <!-- Screening Filters -->
-            <div class="bg-gray-700/50 rounded-xl p-4 mb-6">
-                <h3 class="text-lg font-semibold mb-3 text-white">Screening Filters</h3>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                        <label for="sector-filter" class="text-sm text-gray-300">Sector</label>
-                        <select id="sector-filter" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 mt-1 text-white">
-                            <option value="">All</option>
-                            <option>Technology</option>
-                            <option>Healthcare</option>
-                            <option>Financial Services</option>
-                            <option>Consumer Cyclical</option>
-                            <option>Industrials</option>
-                            <option>Communication Services</option>
-                            <option>Energy</option>
-                            <option>Consumer Defensive</option>
-                            <option>Utilities</option>
-                            <option>Real Estate</option>
-                            <option>Basic Materials</option>
-                        </select>
+        <!-- Main Grid Layout -->
+        <div id="main-content" class="grid grid-cols-1 lg:grid-cols-4 gap-6 opacity-30 pointer-events-none">
+            
+            <!-- Left Column: Command Center -->
+            <div class="lg:col-span-1 bg-gray-700/30 rounded-xl p-4 space-y-6">
+                <!-- Market Context -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-3 text-white">Market Command Center</h3>
+                    <div class="space-y-3">
+                        <div class="metric-card p-4"><h4 class="text-sm text-gray-400">S&P 500 (^GSPC)</h4><p id="sp500-price" class="text-2xl font-bold">-</p><p id="sp500-change" class="text-lg font-semibold">-</p></div>
+                        <div class="metric-card p-4"><h4 class="text-sm text-gray-400">10-Yr Treasury (^TNX)</h4><p id="tnx-price" class="text-2xl font-bold">-</p><p id="tnx-change" class="text-lg font-semibold">-</p></div>
                     </div>
-                    <div>
-                        <label for="pe-filter" class="text-sm text-gray-300">Max P/E Ratio</label>
-                        <input type="number" id="pe-filter" placeholder="e.g., 25" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 mt-1 text-white">
+                </div>
+                <!-- Watchlist -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-3 text-white">My Watchlist</h3>
+                    <div id="watchlist" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                </div>
+            </div>
+
+            <!-- Right Column: Screener and Analyzer -->
+            <div class="lg:col-span-3">
+                <!-- Screening Filters -->
+                <div class="bg-gray-700/50 rounded-xl p-4 mb-6">
+                    <h3 class="text-lg font-semibold mb-3 text-white">Screening Filters</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <div><label for="sector-filter" class="text-sm text-gray-300">Sector</label><select id="sector-filter" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 mt-1 text-white"><option value="">All</option><option>Technology</option><option>Healthcare</option><option>Financial Services</option><option>Consumer Cyclical</option><option>Industrials</option><option>Communication Services</option><option>Energy</option><option>Consumer Defensive</option><option>Utilities</option><option>Real Estate</option><option>Basic Materials</option></select></div>
+                        <div><label for="pe-filter" class="text-sm text-gray-300">Max P/E</label><input type="number" id="pe-filter" placeholder="e.g., 25" class="filter-input w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 mt-1 text-white"></div>
+                        <div><label for="peg-filter" class="text-sm text-gray-300">Max PEG</label><input type="number" id="peg-filter" placeholder="e.g., 1.5" class="filter-input w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 mt-1 text-white"></div>
+                        <div><label for="de-filter" class="text-sm text-gray-300">Max D/E</label><input type="number" id="de-filter" placeholder="e.g., 1.0" class="filter-input w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 mt-1 text-white"></div>
+                        <div class="self-end"><button id="filter-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Apply</button></div>
                     </div>
-                    <div>
-                        <label for="dividend-filter" class="text-sm text-gray-300">Min Dividend Yield (%)</label>
-                        <input type="number" id="dividend-filter" placeholder="e.g., 2" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 mt-1 text-white">
+                </div>
+
+                <!-- Controls -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="md:col-span-2">
+                        <label for="stock-search" class="block text-sm font-medium text-gray-300 mb-1">Search Ticker or Company Name (<span id="stock-count">0</span> loaded)</label>
+                        <input id="stock-search" list="stock-list" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white" placeholder="e.g., AAPL or Apple Inc.">
+                        <datalist id="stock-list"></datalist>
                     </div>
                     <div class="self-end">
-                        <button id="filter-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Apply Filters</button>
+                        <button id="analyze-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Analyze</button>
                     </div>
                 </div>
-            </div>
 
-            <!-- Controls -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div class="md:col-span-2">
-                    <label for="stock-select" class="block text-sm font-medium text-gray-300 mb-1">Select Stock (<span id="stock-count">0</span> found)</label>
-                    <select id="stock-select" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"></select>
-                </div>
-                <div class="self-end">
-                    <button id="analyze-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Analyze</button>
-                </div>
-            </div>
-
-            <!-- Analysis Results -->
-            <div id="results-section" class="hidden">
-                <div id="loader" class="text-center py-8 hidden"><p>Analyzing...</p></div>
-                <div id="analysis-grid" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                    <div class="lg:col-span-1 space-y-6">
-                        <div id="recommendation-card" class="recommendation-card p-6 text-center rounded-xl h-full flex flex-col justify-center">
-                            <h3 class="text-lg font-semibold text-gray-300 mb-2">Overall Rating</h3>
-                            <p id="recommendation-text" class="text-4xl font-bold">-</p>
-                        </div>
+                <!-- Analysis Results -->
+                <div id="results-section" class="hidden">
+                    <div id="loader" class="text-center py-8 hidden"><p>Analyzing...</p></div>
+                    <div id="analysis-grid" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                        <div class="lg:col-span-1 space-y-6"><div id="recommendation-card" class="recommendation-card p-6 text-center rounded-xl h-full flex flex-col justify-center"><h3 class="text-lg font-semibold text-gray-300 mb-2">Overall Rating</h3><p id="recommendation-text" class="text-4xl font-bold">-</p></div></div>
+                        <div class="lg:col-span-1 space-y-6"><div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">API DCF vs. Price</h3><p id="api-dcf-value" class="text-2xl font-bold">-</p><p id="api-dcf-interpretation" class="text-sm text-gray-400 mt-1">-</p></div><div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">Analyst Rating</h3><p id="analyst-rating" class="text-3xl font-bold">-</p></div></div>
+                        <div class="lg:col-span-1 space-y-6"><div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">RSI (14 Day)</h3><p id="rsi-value" class="text-3xl font-bold">-</p><p id="rsi-interpretation" class="text-sm text-gray-400 mt-1">-</p></div><div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">Trend Signal</h3><p id="ma-cross-value" class="text-2xl font-bold">-</p></div></div>
+                        <div class="lg:col-span-1 space-y-6"><div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">Insider Sentiment</h3><p id="insider-sentiment" class="text-3xl font-bold">-</p></div><div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">P/E Ratio</h3><p id="pe-value" class="text-3xl font-bold">-</p></div></div>
                     </div>
-                    <div class="lg:col-span-1 space-y-6">
-                        <div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">API DCF vs. Price</h3><p id="api-dcf-value" class="text-2xl font-bold">-</p><p id="api-dcf-interpretation" class="text-sm text-gray-400 mt-1">-</p></div>
-                        <div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">Analyst Rating</h3><p id="analyst-rating" class="text-3xl font-bold">-</p></div>
+                    <div id="chart-section" class="mt-6 bg-gray-700/50 rounded-xl p-6"><h3 class="text-lg font-semibold mb-3 text-white">1-Year Price Chart</h3><canvas id="priceChart"></canvas></div>
+                    <div id="news-filings-section" class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                        <div class="bg-gray-700/50 rounded-xl p-6"><h3 class="text-lg font-semibold mb-3">Recent News</h3><div id="news-list" class="space-y-3 max-h-60 overflow-y-auto pr-2"></div></div>
+                        <div class="bg-gray-700/50 rounded-xl p-6"><h3 class="text-lg font-semibold mb-3">Dividend Yield</h3><p id="dividend-yield" class="text-4xl font-bold text-center">-</p><h3 class="text-lg font-semibold mb-3 mt-6">SEC Filings</h3><a id="filings-link" href="#" target="_blank" class="block text-center bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">View Filings on EDGAR</a></div>
                     </div>
-                    <div class="lg:col-span-1 space-y-6">
-                        <div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">RSI (14 Day)</h3><p id="rsi-value" class="text-3xl font-bold">-</p><p id="rsi-interpretation" class="text-sm text-gray-400 mt-1">-</p></div>
-                        <div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">Trend Signal</h3><p id="ma-cross-value" class="text-2xl font-bold">-</p></div>
-                    </div>
-                    <div class="lg:col-span-1 space-y-6">
-                        <div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">Insider Sentiment</h3><p id="insider-sentiment" class="text-3xl font-bold">-</p></div>
-                        <div class="metric-card"><h3 class="text-lg font-semibold text-gray-300 mb-2">P/E Ratio</h3><p id="pe-value" class="text-3xl font-bold">-</p></div>
-                    </div>
-                </div>
-                 <!-- News and Filings Section -->
-                <div id="news-filings-section" class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    <div class="bg-gray-700/50 rounded-xl p-6">
-                        <h3 class="text-lg font-semibold mb-3">Recent News</h3>
-                        <div id="news-list" class="space-y-3 max-h-60 overflow-y-auto pr-2"></div>
-                    </div>
-                    <div class="bg-gray-700/50 rounded-xl p-6">
-                         <h3 class="text-lg font-semibold mb-3">Dividend Yield</h3>
-                         <p id="dividend-yield" class="text-4xl font-bold text-center">-</p>
-                         <h3 class="text-lg font-semibold mb-3 mt-6">SEC Filings</h3>
-                         <a id="filings-link" href="#" target="_blank" class="block text-center bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">View Filings on EDGAR</a>
-                    </div>
+                    <div class="mt-6 text-center"><button id="add-watchlist-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Add to Watchlist</button></div>
                 </div>
             </div>
         </div>
@@ -134,36 +114,22 @@
 
     <script>
         // --- DOM Elements ---
-        const apiKeySection = document.getElementById('api-key-section');
-        const apiKeyInput = document.getElementById('api-key');
-        const saveKeyBtn = document.getElementById('save-key-btn');
-        const mainContent = document.getElementById('main-content');
-        const stockSelect = document.getElementById('stock-select');
-        const analyzeBtn = document.getElementById('analyze-btn');
-        const resultsSection = document.getElementById('results-section');
-        const loader = document.getElementById('loader');
-        const analysisGrid = document.getElementById('analysis-grid');
-        const recommendationCard = document.getElementById('recommendation-card');
-        const recommendationText = document.getElementById('recommendation-text');
-        const rsiValue = document.getElementById('rsi-value');
-        const rsiInterpretation = document.getElementById('rsi-interpretation');
-        const maCrossValue = document.getElementById('ma-cross-value');
-        const peValue = document.getElementById('pe-value');
-        const analystRating = document.getElementById('analyst-rating');
-        const insiderSentiment = document.getElementById('insider-sentiment');
-        const dividendYield = document.getElementById('dividend-yield');
-        const filterBtn = document.getElementById('filter-btn');
-        const sectorFilter = document.getElementById('sector-filter');
-        const peFilter = document.getElementById('pe-filter');
-        const dividendFilter = document.getElementById('dividend-filter');
-        const stockCount = document.getElementById('stock-count');
-        const apiDcfValue = document.getElementById('api-dcf-value');
-        const apiDcfInterpretation = document.getElementById('api-dcf-interpretation');
-        const newsList = document.getElementById('news-list');
-        const filingsLink = document.getElementById('filings-link');
+        const apiKeySection = document.getElementById('api-key-section'), apiKeyInput = document.getElementById('api-key'), saveKeyBtn = document.getElementById('save-key-btn');
+        const mainContent = document.getElementById('main-content'), stockSearchInput = document.getElementById('stock-search'), stockList = document.getElementById('stock-list'), analyzeBtn = document.getElementById('analyze-btn');
+        const resultsSection = document.getElementById('results-section'), loader = document.getElementById('loader'), analysisGrid = document.getElementById('analysis-grid');
+        const recommendationCard = document.getElementById('recommendation-card'), recommendationText = document.getElementById('recommendation-text');
+        const rsiValue = document.getElementById('rsi-value'), rsiInterpretation = document.getElementById('rsi-interpretation'), maCrossValue = document.getElementById('ma-cross-value');
+        const peValue = document.getElementById('pe-value'), analystRating = document.getElementById('analyst-rating'), insiderSentiment = document.getElementById('insider-sentiment');
+        const dividendYield = document.getElementById('dividend-yield'), filterBtn = document.getElementById('filter-btn'), sectorFilter = document.getElementById('sector-filter');
+        const peFilter = document.getElementById('pe-filter'), dividendFilter = document.getElementById('dividend-filter'), stockCount = document.getElementById('stock-count');
+        const apiDcfValue = document.getElementById('api-dcf-value'), apiDcfInterpretation = document.getElementById('api-dcf-interpretation');
+        const newsList = document.getElementById('news-list'), filingsLink = document.getElementById('filings-link'), priceChartCanvas = document.getElementById('priceChart');
+        const sp500Price = document.getElementById('sp500-price'), sp500Change = document.getElementById('sp500-change'), tnxPrice = document.getElementById('tnx-price'), tnxChange = document.getElementById('tnx-change');
+        const watchlistDiv = document.getElementById('watchlist'), addWatchlistBtn = document.getElementById('add-watchlist-btn');
+        const pegFilter = document.getElementById('peg-filter'), deFilter = document.getElementById('de-filter');
 
         // --- Global State ---
-        let apiKey = '';
+        let apiKey = '', priceChart = null, allStocks = [], watchlist = [];
         const FMP_API_BASE_URL = 'https://financialmodelingprep.com/api/v3';
 
         // --- App Initialization ---
@@ -175,6 +141,8 @@
                 apiKeySection.style.display = 'none';
                 mainContent.classList.remove('opacity-30', 'pointer-events-none');
                 loadAndFilterStocks();
+                fetchMarketContext();
+                loadWatchlist();
             } else {
                 apiKeySection.classList.remove('hidden');
             }
@@ -185,21 +153,35 @@
             if (key) {
                 apiKey = key;
                 localStorage.setItem('fmpApiKey', key);
-                apiKeySection.style.display = 'none';
-                mainContent.classList.remove('opacity-30', 'pointer-events-none');
-                loadAndFilterStocks();
+                initializeApp();
             } else {
                 alert('Please enter a valid API key.');
             }
         }
 
-        // --- Analysis & Data Functions ---
+        // --- Data & Analysis Functions ---
         async function fetchFMP(endpoint) {
             const separator = endpoint.includes('?') ? '&' : '?';
             const url = `${FMP_API_BASE_URL}${endpoint}${separator}apikey=${apiKey}`;
             const response = await fetch(url);
             if (!response.ok) throw new Error(`API request failed: ${response.status}`);
             return response.json();
+        }
+
+        async function fetchMarketContext() {
+            try {
+                const [sp500Data, tnxData] = await Promise.all([
+                    fetchFMP('/quote/^GSPC'),
+                    fetchFMP('/quote/^TNX')
+                ]);
+                const sp500 = sp500Data[0], tnx = tnxData[0];
+                sp500Price.textContent = sp500.price.toFixed(2);
+                sp500Change.textContent = `${sp500.change.toFixed(2)} (${sp500.changesPercentage.toFixed(2)}%)`;
+                sp500Change.className = `text-lg font-semibold ${sp500.change >= 0 ? 'text-green-400' : 'text-red-400'}`;
+                tnxPrice.textContent = tnx.price.toFixed(3);
+                tnxChange.textContent = `${tnx.change.toFixed(3)} (${tnx.changesPercentage.toFixed(2)}%)`;
+                tnxChange.className = `text-lg font-semibold ${tnx.change >= 0 ? 'text-green-400' : 'text-red-400'}`;
+            } catch (error) { console.error('Error fetching market context:', error); }
         }
 
         async function loadAndFilterStocks() {
@@ -209,16 +191,18 @@
                 let url = '/stock-screener?marketCapMoreThan=10000000000&limit=1000&exchange=NASDAQ,NYSE';
                 if (sectorFilter.value) url += `&sector=${encodeURIComponent(sectorFilter.value)}`;
                 if (peFilter.value) url += `&peMoreThan=0&peLowerThan=${peFilter.value}`;
-                if (dividendFilter.value) url += `&dividendMoreThan=${dividendFilter.value}`;
+                if (pegFilter.value) url += `&pegMoreThan=0&pegLowerThan=${pegFilter.value}`;
+                if (deFilter.value) url += `&debtToEquityLowerThan=${deFilter.value}`;
                 
                 const stocks = await fetchFMP(url);
-                const sortedStocks = stocks.sort((a, b) => a.companyName.localeCompare(b.companyName));
-                let optionsHtml = '<option value="" disabled selected>Select a stock</option>';
-                sortedStocks.forEach(stock => {
-                    optionsHtml += `<option value="${stock.symbol}">${stock.companyName} (${stock.symbol})</option>`;
+                allStocks = stocks.sort((a, b) => a.companyName.localeCompare(b.companyName));
+                
+                let optionsHtml = '';
+                allStocks.forEach(stock => {
+                    optionsHtml += `<option value="${stock.symbol}">${stock.companyName}</option>`;
                 });
-                stockSelect.innerHTML = optionsHtml;
-                stockCount.textContent = sortedStocks.length;
+                stockList.innerHTML = optionsHtml;
+                stockCount.textContent = allStocks.length;
             } catch (error) {
                 alert('Failed to load stock list. Check your API key.');
                 console.error('Error loading stocks:', error);
@@ -244,14 +228,39 @@
             const rs = (gains / period) / (losses / period);
             return 100 - (100 / (1 + rs));
         }
+        
+        function renderPriceChart(historicalData) {
+            if (priceChart) priceChart.destroy();
+            const prices = historicalData.map(d => d.close).reverse();
+            const labels = historicalData.map(d => d.date).reverse();
+            const ma50Data = [], ma200Data = [];
 
-        async function runAnalysis() {
-            const symbol = stockSelect.value;
+            for (let i = 0; i < prices.length; i++) {
+                ma50Data.push(i >= 49 ? calculateMA(prices.slice(0, i + 1), 50) : null);
+                ma200Data.push(i >= 199 ? calculateMA(prices.slice(0, i + 1), 200) : null);
+            }
+
+            priceChart = new Chart(priceChartCanvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Price', data: prices, borderColor: 'rgb(59, 130, 246)', borderWidth: 2, pointRadius: 0 },
+                        { label: '50-Day MA', data: ma50Data, borderColor: 'rgb(234, 179, 8)', borderWidth: 1.5, pointRadius: 0, borderDash: [5, 5] },
+                        { label: '200-Day MA', data: ma200Data, borderColor: 'rgb(239, 68, 68)', borderWidth: 1.5, pointRadius: 0, borderDash: [5, 5] }
+                    ]
+                },
+                options: { scales: { x: { ticks: { color: '#9CA3AF' } }, y: { ticks: { color: '#9CA3AF' } } }, plugins: { legend: { labels: { color: '#D1D5DB' } } } }
+            });
+        }
+
+        async function runAnalysis(symbol) {
             if (!symbol) return;
-
+            stockSearchInput.value = symbol;
             resultsSection.style.display = 'block';
             analysisGrid.style.display = 'none';
             document.getElementById('news-filings-section').style.display = 'none';
+            document.getElementById('chart-section').style.display = 'none';
             loader.style.display = 'block';
 
             try {
@@ -267,27 +276,19 @@
                 let score = 0;
                 const prices = historicalData.historical ? historicalData.historical.map(d => d.close).reverse() : [];
                 
-                // Technical Analysis
                 if (prices.length > 200) {
+                    renderPriceChart(historicalData.historical);
                     const rsi = calculateRSI(prices.slice(-15), 14);
                     rsiValue.textContent = rsi ? rsi.toFixed(2) : 'N/A';
                     rsiInterpretation.textContent = rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral';
                     if (rsi < 30) score++;
 
-                    const ma50 = calculateMA(prices, 50);
-                    const ma200 = calculateMA(prices, 200);
-                    const prevMa50 = calculateMA(prices.slice(0, -1), 50);
-
-                    if (ma50 > ma200 && prevMa50 <= calculateMA(prices.slice(0, -1), 200)) {
-                        maCrossValue.textContent = 'Golden Cross'; score += 2;
-                    } else if (ma50 < ma200 && prevMa50 >= calculateMA(prices.slice(0, -1), 200)) {
-                        maCrossValue.textContent = 'Death Cross'; score -= 2;
-                    } else {
-                        maCrossValue.textContent = ma50 > ma200 ? 'Uptrend' : 'Downtrend';
-                    }
+                    const ma50 = calculateMA(prices, 50), ma200 = calculateMA(prices, 200), prevMa50 = calculateMA(prices.slice(0, -1), 50);
+                    if (ma50 > ma200 && prevMa50 <= calculateMA(prices.slice(0, -1), 200)) { maCrossValue.textContent = 'Golden Cross'; score += 2; } 
+                    else if (ma50 < ma200 && prevMa50 >= calculateMA(prices.slice(0, -1), 200)) { maCrossValue.textContent = 'Death Cross'; score -= 2; } 
+                    else { maCrossValue.textContent = ma50 > ma200 ? 'Uptrend' : 'Downtrend'; }
                 }
 
-                // Fundamental & Sentiment Analysis
                 const metrics = keyMetricsData[0];
                 peValue.textContent = metrics?.peRatioTTM?.toFixed(2) ?? 'N/A';
                 dividendYield.textContent = metrics?.dividendYieldTTM ? `${(metrics.dividendYieldTTM * 100).toFixed(2)}%` : 'N/A';
@@ -296,19 +297,15 @@
                 const rating = ratingData[0];
                 if (rating) {
                     analystRating.textContent = rating.ratingRecommendation || 'N/A';
-                    if (rating.ratingScore === 5) score +=2;
-                    if (rating.ratingScore === 4) score +=1;
-                    if (rating.ratingScore === 1) score -=2;
-                    if (rating.ratingScore === 2) score -=1;
+                    if (rating.ratingScore === 5) score +=2; if (rating.ratingScore === 4) score +=1;
+                    if (rating.ratingScore === 1) score -=2; if (rating.ratingScore === 2) score -=1;
                 }
                 
                 const netInsider = insiderData.reduce((acc, trade) => acc + (trade.transactionType === 'P-Purchase' ? trade.transactionShares : -trade.transactionShares), 0);
                 insiderSentiment.textContent = netInsider > 5000 ? 'Positive' : netInsider < -5000 ? 'Negative' : 'Neutral';
                 if (netInsider > 10000) score++;
                 
-                // API DCF Analysis
-                const dcf = dcfData[0];
-                const currentPrice = prices.length > 0 ? prices[prices.length - 1] : dcf?.StockPrice;
+                const dcf = dcfData[0], currentPrice = prices.length > 0 ? prices[prices.length - 1] : dcf?.StockPrice;
                 if (dcf?.dcf && currentPrice) {
                     apiDcfValue.textContent = `$${dcf.dcf.toFixed(2)} vs $${currentPrice.toFixed(2)}`;
                     const upside = ((dcf.dcf - currentPrice) / currentPrice) * 100;
@@ -319,11 +316,9 @@
                     apiDcfInterpretation.textContent = 'Data unavailable';
                 }
 
-                // News and Filings
                 newsList.innerHTML = newsData.length ? newsData.map(item => `<a href="${item.url}" target="_blank" class="block p-2 bg-gray-800 rounded-lg hover:bg-gray-700"><p class="font-semibold text-sm">${item.title}</p></a>`).join('') : '<p class="text-gray-400 text-sm">No news.</p>';
                 filingsLink.href = `https://www.sec.gov/edgar/browse/?CIK=${symbol}`;
 
-                // Final Recommendation
                 let recText = 'Hold', recColor = 'bg-gray-700/50';
                 if (score >= 4) { recText = 'Strong Buy'; recColor = 'bg-green-800/80'; }
                 else if (score >= 2) { recText = 'Buy'; recColor = 'bg-green-700/60'; }
@@ -331,6 +326,9 @@
                 else if (score <= -2) { recText = 'Sell'; recColor = 'bg-red-700/60'; }
                 recommendationText.textContent = recText;
                 recommendationCard.className = `recommendation-card p-6 text-center rounded-xl h-full flex flex-col justify-center ${recColor}`;
+                
+                addWatchlistBtn.dataset.symbol = symbol;
+                addWatchlistBtn.classList.remove('hidden');
 
             } catch (error) {
                 alert(`Failed to analyze ${symbol}.`);
@@ -338,14 +336,56 @@
             } finally {
                 analysisGrid.style.display = 'grid';
                 document.getElementById('news-filings-section').style.display = 'grid';
+                document.getElementById('chart-section').style.display = 'block';
                 loader.style.display = 'none';
             }
         }
 
+        // --- Watchlist Functions ---
+        function loadWatchlist() {
+            const saved = localStorage.getItem('stockWatchlist');
+            watchlist = saved ? JSON.parse(saved) : [];
+            renderWatchlist();
+        }
+        
+        function saveWatchlist() {
+            localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
+            renderWatchlist();
+        }
+
+        function addToWatchlist(symbol) {
+            if (symbol && !watchlist.includes(symbol)) {
+                watchlist.push(symbol);
+                saveWatchlist();
+            }
+        }
+
+        function removeFromWatchlist(symbol) {
+            watchlist = watchlist.filter(s => s !== symbol);
+            saveWatchlist();
+        }
+
+        function renderWatchlist() {
+            watchlistDiv.innerHTML = '';
+            if (watchlist.length === 0) {
+                watchlistDiv.innerHTML = '<p class="text-gray-400 text-sm text-center">Your watchlist is empty.</p>';
+                return;
+            }
+            watchlist.forEach(symbol => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center bg-gray-800 p-2 rounded-lg';
+                item.innerHTML = `<span class="font-semibold cursor-pointer hover:text-blue-400">${symbol}</span><button class="text-red-400 hover:text-red-300 font-bold">✖</button>`;
+                item.querySelector('span').addEventListener('click', () => runAnalysis(symbol));
+                item.querySelector('button').addEventListener('click', () => removeFromWatchlist(symbol));
+                watchlistDiv.appendChild(item);
+            });
+        }
+
         // --- Event Listeners & Initialization ---
         saveKeyBtn.addEventListener('click', saveApiKey);
-        analyzeBtn.addEventListener('click', runAnalysis);
+        analyzeBtn.addEventListener('click', () => runAnalysis(stockSearchInput.value.trim().toUpperCase()));
         filterBtn.addEventListener('click', loadAndFilterStocks);
+        addWatchlistBtn.addEventListener('click', (e) => addToWatchlist(e.target.dataset.symbol));
         
         initializeApp();
 
